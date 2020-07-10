@@ -1,0 +1,146 @@
+---
+title: "Motor Trend Analysis_Course(RM) Project"
+author: "Pengfei LI"
+date: "7/9/2020"
+output: pdf_document
+---
+
+# **Executive Summary**
+
+## Introduction
+
+This report aims to provide an analysis report for the magazine _Motor Trend_. The whole analysis is to explore the relationship between  a set of variables and miles per gallon (MPG). Here we shall focus on two main issues,
+
+1. "Is an automatic or manual transmission better for MPG?"
+2. "Quantify the MPG difference between automatic and manual transmissions"
+
+To answer these issues, we start from the dataset of a collection of cars.
+
+
+# ** Exploratory Analysis**
+
+## Data Description
+
+Here I analyze the dataset (mtcars) through several steps in the following section. This dataset could be loaded via R command _data(mtcars)_, in which the data was extracted from the 1974 Motor Trend US magazine. This dataset colltects fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).
+
+The dataset presents the mentioned data in the following columns.
+
+* mpg	Miles/(US) gallon
+* cyl	Number of cylinders
+* disp	Displacement (cu.in.)
+* hp	Gross horsepower
+* drat	Rear axle ratio
+* wt	Weight (1000 lbs)
+* qsec	1/4 mile time
+* vs	Engine (0 = V-shaped, 1 = straight)
+* am	Transmission (0 = automatic, 1 = manual)
+* gear	Number of forward gears
+* carb	Number of carburetors
+
+## Data Pre-processing
+
+Here the procedure of data pre-processing is provided.
+
+```{r,echo=TRUE}
+# Load the package
+library(datasets)
+library(ggplot2)
+
+# Load the data
+data(mtcars)
+
+# Checking the dataset
+dim(mtcars)
+str(mtcars)
+names(cars)
+
+# Clean the data
+mtcars$cyl  <- factor(mtcars$cyl)
+mtcars$vs   <- factor(mtcars$vs)
+mtcars$gear <- factor(mtcars$gear)
+mtcars$carb <- factor(mtcars$carb)
+mtcars$am   <- factor(mtcars$am,labels=c("Auto","Manual"))
+
+# View the data
+summary(mtcars)
+```
+
+## Analysis
+
+### Regression Analysis
+
+Based on the data pre-processing section, the dataset splits into several variables. To explore the relationship between other variables and mpg, I set the regression model with all variables inside as the predictor, and then gradually select the most significant predictors for the final model. With the AIC algorithm, I use the forward selection and backward elimination method to run the model selection below.
+
+```{r,echo=TRUE,results='hide'}
+start_model <- lm(mpg~.,data = mtcars)
+final_model <- step(start_model,direction = "both")
+```
+
+```{r,echo=TRUE}
+summary(final_model)
+```
+
+From the outcome of this process, the adjusted R squared value is 0.8401, showing that the above model could explain 84% variablity. 
+
+Then, I turn to anova analysis to check the regression model (**am** as the predictor) and the final model.
+
+```{r,echo=TRUE}
+rg1 <- lm(mpg~am,data = mtcars)
+anova(rg1,final_model)
+```
+
+The result of anova process shows that **am** is the key predictor contributing to the accuracy of the model.
+
+In the end, I go for the T-test to check whether two different transmission types are significantly different.
+
+```{r, echo=TRUE}
+t.test(mpg~am, data = mtcars)
+```
+
+Here the p-value is 0.001374, which means there is a significant difference between automatic cars and manual cars.
+
+To quantify this difference, I run the following analysis.
+
+```{r,echo=TRUE}
+summary(rg1)
+```
+
+The outcome shows that the average MPG for automatic cars is 17.147 while manual is 7.2. However, the low $R^{2}$ value shows that the model only could explain 36% of variance. This infers that the analysis need the supplementary multivariate linear regression. The new model is as follows.
+
+```{r,echo=TRUE}
+rg2 <- lm(mpg~am+cyl+disp+hp+wt, data = mtcars)
+anova(rg1,rg2)
+```
+
+The result presents a low p-value, meaning that the supplementary model is better. Thus, I double-check the residuals, which is in the normal distribution and all are homoskedastic.
+
+```{r,echo=TRUE}
+summary(rg2)
+```
+
+This result shows that 86.64% of the variance could be explained. It also shows that the difference between automatic cars and manual cars is 1.806 mpg.
+
+
+# **Conclusion**
+
+Based on the analysis in upper section, the manual transmission is better for MPG. Moreover, it is **1.806 larger** than automatic transmission on MPG.
+
+# **APPENDIX**
+
+*Plot 1*
+```{r,echo=TRUE}
+boxplot(mpg ~ am, data = mtcars, col = (c("purple","yellow")), ylab = "Miles per gallon", xlab = "Transmission",main="MPG under different transmission type")
+```
+
+*Plot 2*
+```{r,echo=TRUE}
+par(mfrow = c(2,2))
+plot(rg2)
+```
+
+
+*Plot 3*
+```{r,echo=TRUE}
+pairs(mpg ~ ., data = mtcars,main= "Pairs Plot")
+```
+
